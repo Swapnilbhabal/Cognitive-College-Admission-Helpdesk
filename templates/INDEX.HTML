@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIT Admission Voice Assistant</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+  
+  <style>
+    :root {
+      --navy: #071b3a;
+      --navy-deep: #041126;
+      --paper: #fbfcff;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--navy-deep); }
+    body {
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--paper);
+      font-family: "DM Sans", sans-serif;
+      overflow-x: hidden;
+    }
+
+    .app-shell {
+      width: 100%;
+      min-height: 100vh;
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 12% 14%, rgba(183, 43, 76, 0.21), transparent 27rem),
+        radial-gradient(circle at 88% 84%, rgba(31, 97, 174, 0.25), transparent 30rem),
+        linear-gradient(145deg, #071b3a 0%, #041126 62%, #0a1f42 100%);
+    }
+
+    .app-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.16;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(220, 232, 247, 0.16) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(220, 232, 247, 0.16) 1px, transparent 1px);
+      background-size: 38px 38px;
+      mask-image: linear-gradient(to bottom, black, transparent 72%);
+    }
+
+    .orbit {
+      position: absolute;
+      border: 1px solid rgba(220, 232, 247, 0.13);
+      border-radius: 50%;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .orbit-one { top: -11rem; right: -7rem; width: 23rem; height: 23rem; }
+    .orbit-two { bottom: -15rem; left: -10rem; width: 31rem; height: 31rem; }
+
+    .main-panel {
+      background: rgba(6, 27, 58, 0.72);
+      border: 1px solid rgba(220, 232, 247, 0.18);
+      box-shadow: 0 28px 72px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(18px);
+    }
+
+    .avatar-ring {
+      background: conic-gradient(from 30deg, #c33a5c, #f0e7d7, #2f78c4, #c33a5c);
+      box-shadow: 0 0 0 7px rgba(220, 232, 247, 0.07), 0 13px 34px rgba(0, 0, 0, 0.28);
+    }
+    .avatar-face {
+      background: radial-gradient(circle at 50% 18%, #ffffff 0 8%, #dbeaff 9% 30%, #84aed7 68%, #5682b4 100%);
+    }
+
+    .voice-button {
+      width: 9.5rem;
+      height: 9.5rem;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.54);
+      border-radius: 999px;
+      background: linear-gradient(145deg, #b72b4c, #75142d);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32), inset 0 1px 1px rgba(255,255,255,0.36);
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+
+    .voice-button.is-listening {
+      background: linear-gradient(145deg, #145495, #0a2f5d);
+      box-shadow: 0 0 0 10px rgba(72, 146, 220, 0.11), 0 18px 42px rgba(0, 0, 0, 0.32);
+    }
+    .voice-button.is-listening::before,
+    .voice-button.is-listening::after {
+      content: "";
+      position: absolute;
+      inset: -14px;
+      border: 1px solid rgba(176, 218, 255, 0.55);
+      border-radius: inherit;
+      animation: pulse-ring 1.7s ease-out infinite;
+    }
+    .voice-button.is-listening::after { animation-delay: 0.85s; }
+
+    @keyframes pulse-ring {
+      from { opacity: 0.7; transform: scale(0.86); }
+      to { opacity: 0; transform: scale(1.2); }
+    }
+
+    .waveform { height: 42px; display: flex; justify-content: center; align-items: center; gap: 5px; }
+    .wave-bar { width: 4px; height: 8px; border-radius: 999px; background: #82bbef; opacity: 0.46; transition: height 180ms ease; }
+    .is-listening .wave-bar { opacity: 1; background: #f4d3db; animation: talk 700ms ease-in-out infinite alternate; }
+    .is-listening .wave-bar:nth-child(2n) { animation-delay: 120ms; }
+    .is-listening .wave-bar:nth-child(3n) { animation-delay: 220ms; }
+    .is-listening .wave-bar:nth-child(4n) { animation-delay: 320ms; }
+
+    @keyframes talk { from { height: 9px; } to { height: 38px; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="orbit orbit-one"></div>
+    <div class="orbit orbit-two"></div>
+    
+    <header class="w-full px-5 pt-5 sm:px-8 sm:pt-7">
+      <div class="mx-auto flex max-w-5xl items-center justify-between gap-4">
+        <div>
+          <p class="text-sm font-bold tracking-[0.12em] uppercase text-white">Vidyalankar Institute of Technology</p>
+          <p class="mt-1 text-xs tracking-wide text-[#b9d6f3]">Admission Voice Assistant</p>
+        </div>
+        <div class="flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold bg-white/10 text-emerald-100">
+          <span class="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_#86efac]"></span> 
+          <span>AI assistant ready</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="w-full px-5 pb-8 pt-8 sm:px-8 sm:pt-12">
+      <section class="main-panel mx-auto max-w-2xl rounded-[2rem] px-5 py-8 text-center sm:px-10 sm:py-11">
+        
+        <div class="avatar-ring mx-auto grid h-20 w-20 place-items-center rounded-full p-[3px]">
+          <div class="avatar-face grid h-full w-full place-items-center rounded-full overflow-hidden bg-white">
+            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/b/b3/Vidyalankar_Institute_of_Technology_logo.png/220px-Vidyalankar_Institute_of_Technology_logo.png" 
+                 onerror="this.src='https://placehold.co/100x100/ffffff/071b3a?text=VIT'" 
+                 alt="VIT Logo" class="h-12 w-12 object-contain" />
+          </div>
+        </div>
+        
+        <p class="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-[#f7c9d4]">Admissions support, made simple</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-white leading-tight">VIT Admissions AI</h1>
+        <p class="mx-auto mt-3 max-w-lg leading-relaxed text-[#dce8f7]">Please enter your email below to begin. Our AI will ask for your CET/JEE scores and guide you.</p>
+        
+        <div id="email-gate" class="mt-8 border-t border-white/15 pt-7">
+          <input type="email" id="user-email" placeholder="Enter your Gmail address..." class="w-full rounded-xl px-4 py-4 text-black font-medium text-center mb-4 focus:outline-none focus:ring-4 focus:ring-[#b72b4c]/50 transition-all shadow-inner" required>
+          <button id="proceed-btn" type="button" class="w-full rounded-xl px-4 py-4 text-sm font-bold uppercase tracking-wider text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]" style="background: linear-gradient(145deg, #b72b4c, #891c36);">
+            Proceed to AI Bot
+          </button>
+        </div>
+
+        <div id="voice-area" class="mt-8 hidden border-t border-white/15 pt-7">
+          <div id="voice-visualizer" aria-hidden="true">
+            <div class="waveform" id="waveform">
+              <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+              <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+              <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+            </div>
+          </div>
+          
+          <div class="mt-3 min-h-[1.5rem]" aria-live="polite">
+            <p id="call-status" class="text-sm font-medium text-[#f7c9d4]">Initializing secure connection...</p>
+          </div>
+
+          <button id="voice-toggle" type="button" class="voice-button mx-auto mt-5 grid place-items-center text-white cursor-default"> 
+            <span class="flex flex-col items-center gap-2"> 
+              <i data-lucide="mic" class="h-8 w-8"></i> 
+              <span id="mic-label" class="text-sm font-bold">Connecting...</span> 
+            </span> 
+          </button>
+
+          <button id="end-call-btn" type="button" class="mt-8 w-full rounded-xl px-4 py-4 text-sm font-bold uppercase tracking-wider text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]" style="background: linear-gradient(145deg, #145495, #0a2f5d);">
+            End Call & Receive Summary Mail
+          </button>
+          
+          <div id="mail-status-box" class="hidden mt-4 p-4 rounded-xl bg-black/30 border border-white/10">
+            <p id="mail-status" class="text-sm font-medium"></p>
+          </div>
+        </div>
+
+      </section>
+    </main>
+    
+    <footer class="w-full px-5 pb-6 sm:px-8 absolute bottom-0">
+      <p class="mx-auto max-w-2xl text-center text-xs leading-relaxed text-[#b9d6f3]/60">This AI assistant provides general admission guidance. For final information, refer to official institute communications.</p>
+    </footer>
+  </div>
+
+  <script type="module">
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+
+      const emailGate = document.getElementById("email-gate");
+      const userEmailInput = document.getElementById("user-email");
+      const proceedBtn = document.getElementById("proceed-btn");
+      const voiceArea = document.getElementById("voice-area");
+      const voiceToggle = document.getElementById("voice-toggle");
+      const voiceVisualizer = document.getElementById("voice-visualizer");
+      const callStatus = document.getElementById("call-status");
+      const micLabel = document.getElementById("mic-label");
+      const endCallBtn = document.getElementById("end-call-btn");
+      const mailStatusBox = document.getElementById("mail-status-box");
+      const mailStatus = document.getElementById("mail-status");
+
+      let currentEmail = "";
+      let conversationSession = null;
+      let callConversationId = null;
+
+      function setListeningUI(isActive) {
+        voiceToggle.classList.toggle("is-listening", isActive);
+        voiceVisualizer.classList.toggle("is-listening", isActive);
+      }
+
+      proceedBtn.addEventListener("click", async () => {
+        const email = userEmailInput.value.trim();
+        if(email && email.includes("@")) {
+          currentEmail = email;
+          
+          // IMMEDIATELY update UI so the user knows it is working
+          emailGate.classList.add("hidden");
+          voiceArea.classList.remove("hidden");
+          
+          callStatus.innerText = "Requesting microphone access...";
+          micLabel.innerText = "Starting...";
+          
+          try {
+            // 1. Request Microphone FIRST
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            callStatus.innerText = "Microphone allowed. Downloading AI Engine... (Please wait)";
+            
+            // 2. Dynamically import ElevenLabs SDK using esm.run (highly stable CDN)
+            const module = await import('https://esm.run/@elevenlabs/client');
+            const Conversation = module.Conversation;
+            
+            callStatus.innerText = "Connecting to VIT Assistant...";
+
+            // 3. Start Session
+            conversationSession = await Conversation.startSession({
+              agentId: "agent_6901m47gpd1neft9g2waxsafd71w",
+              onConnect: () => {
+                callStatus.innerText = "AI Connected! Please speak.";
+                callStatus.style.color = "#86efac"; 
+                micLabel.innerText = "Active";
+                setListeningUI(true);
+              },
+              onDisconnect: () => {
+                callStatus.innerText = "Call ended.";
+                callStatus.style.color = "#dce8f7"; 
+                micLabel.innerText = "Ended";
+                setListeningUI(false);
+              },
+              onError: (error) => {
+                console.error("ElevenLabs Error:", error);
+                alert("ElevenLabs Error: " + error.message);
+                callStatus.innerText = "Connection error.";
+                callStatus.style.color = "#fca5a5"; 
+                setListeningUI(false);
+              },
+              onModeChange: (mode) => {
+                if(mode === 'speaking') {
+                  callStatus.innerText = "AI is speaking...";
+                  callStatus.style.color = "#86efac"; 
+                } else {
+                  callStatus.innerText = "Listening... Speak now.";
+                  callStatus.style.color = "#f7c9d4"; 
+                }
+              }
+            });
+
+            // 4. Safely get the ID AFTER the session is fully initialized
+            callConversationId = conversationSession.getId(); 
+
+          } catch (error) {
+            console.error("Failed to start:", error);
+            alert("Error: " + error.message + "\n\nIf this says 'Permission denied', check your browser mic settings!");
+            callStatus.innerText = "Failed to connect.";
+            callStatus.style.color = "#fca5a5";
+            micLabel.innerText = "Error";
+          }
+        } else {
+          alert("Please enter a valid email address first.");
+        }
+      });
+
+      endCallBtn.addEventListener("click", async () => {
+        if (conversationSession) {
+          await conversationSession.endSession();
+        }
+
+        setListeningUI(false);
+        callStatus.innerText = "Call Ended.";
+        endCallBtn.innerText = "Analyzing Call & Sending Mail...";
+        endCallBtn.disabled = true;
+        endCallBtn.style.opacity = "0.7";
+
+        try {
+          const response = await fetch("/api/send-summary", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ 
+              email: currentEmail,
+              conversation_id: callConversationId 
+            })
+          });
+
+          const result = await response.json();
+
+          mailStatusBox.classList.remove("hidden");
+          if(result.status === "success") {
+            mailStatus.innerText = "✅ Summary email sent successfully! Our admission team will contact you soon.";
+            mailStatus.style.color = "#86efac"; 
+            endCallBtn.innerText = "Email Sent Successfully";
+          } else {
+            mailStatus.innerText = "❌ Failed to send email: " + (result.error || "Unknown error");
+            mailStatus.style.color = "#fca5a5"; 
+            endCallBtn.innerText = "Try Again";
+            endCallBtn.disabled = false;
+            endCallBtn.style.opacity = "1";
+          }
+        } catch (error) {
+          console.error("Error triggering backend email:", error);
+          mailStatusBox.classList.remove("hidden");
+          mailStatus.innerText = "❌ Network error occurred while connecting to backend.";
+          mailStatus.style.color = "#fca5a5";
+          endCallBtn.innerText = "Try Again";
+          endCallBtn.disabled = false;
+          endCallBtn.style.opacity = "1";
+        }
+      });
+    });
+  </script>
+</body>
+</html>
